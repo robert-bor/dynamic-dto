@@ -2,13 +2,11 @@ package com.fuga.dynamicdto.dto;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fuga.dynamicdto.model.Person;
+import com.fuga.dynamicdto.util.DynBeanMapper;
 import io.beanmapper.BeanMapper;
-import javassist.*;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 
@@ -29,25 +27,11 @@ public class PersonDtoTest {
 
     @Test
     public void mapToDynamic() throws Exception {
-        ClassPool cp = ClassPool.getDefault();
-        CtClass dynClass = cp.get("com.fuga.dynamicdto.dto.PersonDto");
-        dynClass.setName("com.fuga.dynamicdto.dto.DynPersonDto");
-
-        includeOnlyFields(dynClass, Arrays.asList("id", "name"));
-
-        Class dynPersonDtoClass = dynClass.toClass();
         Person person = createPerson();
-        Object dynPersonDto = new BeanMapper().map(person, dynPersonDtoClass);
+        Object dynPersonDto = new DynBeanMapper().map(person, PersonDto.class, Arrays.asList("id", "name"));
+
         String json = new ObjectMapper().writeValueAsString(dynPersonDto);
         assertEquals("{\"id\":42,\"name\":\"Henk\"}", json);
-    }
-
-    private void includeOnlyFields(CtClass dynClass, List<String> includeFields) throws NotFoundException {
-        for (CtField field : dynClass.getDeclaredFields()) {
-            if (!includeFields.contains(field.getName())) {
-                dynClass.removeField(field);
-            }
-        }
     }
 
     private Person createPerson() {
