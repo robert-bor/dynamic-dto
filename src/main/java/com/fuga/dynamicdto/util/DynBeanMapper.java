@@ -3,17 +3,29 @@ package com.fuga.dynamicdto.util;
 import com.fuga.dynamicdto.dto.PersonDto;
 import com.fuga.dynamicdto.model.Person;
 import io.beanmapper.BeanMapper;
+import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtField;
 
-import java.util.List;
+import java.util.*;
 
 public class DynBeanMapper {
 
     private BeanMapper beanMapper;
     ClassPool classPool;
+    private static Map<String, Map<String, GeneratedClass>> cachedGeneratedClasses = new TreeMap<>();
+    private static Integer generatedClassSuffix = 0;
+    private Set<String> packages = new TreeSet<>();
 
+    public class GeneratedClass {
+        public CtClass ctClass;
+        public Class generatedClass;
+        public GeneratedClass(CtClass ctClass) throws CannotCompileException {
+            this.ctClass = ctClass;
+            this.generatedClass = ctClass.toClass();
+        }
+    }
 
     public DynBeanMapper() {
         beanMapper = new BeanMapper();
@@ -22,40 +34,61 @@ public class DynBeanMapper {
         classPool = ClassPool.getDefault();
     }
 
+    public void addPackagePrefix(String packagePrefix) {
+        packages.add(packagePrefix);
+    }
+
+    public void addPackagePrefix(Class packagePrefixClass) {
+        addPackagePrefix(packagePrefixClass.getPackage().getName());
+    }
+
     public Object map(Object object, Class clazz, List<String> includeFields) throws Exception {
         if (includeFields == null || includeFields.size() == 0) {
             return beanMapper.map(object, clazz);
         }
 
-        Node node = Node.createTree(includeFields);
+        Node displayFields = Node.createTree(includeFields);
+        GeneratedClass dynPersonDtoClass = getOrCreateGeneratedClass(clazz.getName(), displayFields);
 
-        CtClass dynClass = classPool.get(clazz.getName());
-        dynClass.setName(clazz.getName() + "Dyn");
-
-        processClassTree(node, dynClass);
-
-        Class dynPersonDtoClass = dynClass.toClass();
-
-        return beanMapper.map(object, dynPersonDtoClass);
+        return beanMapper.map(object, dynPersonDtoClass.generatedClass);
     }
 
-    private void processClassTree(Node node, CtClass dynClass) throws Exception {
+    protected GeneratedClass getOrCreateGeneratedClass(String classInPackage, Node displayFields) throws Exception {
+        Map<String, GeneratedClass> generatedClassesForClass = cachedGeneratedClasses.get(classInPackage);
+        if (generatedClassesForClass == null) {
+            generatedClassesForClass = new TreeMap<>();
+            cachedGeneratedClasses.put(classInPackage, generatedClassesForClass);
+        }
+        GeneratedClass generatedClass = generatedClassesForClass.get(displayFields.getKey());
+        if (generatedClass == null) {
+            CtClass dynamicClass = classPool.get(classInPackage);
+            dynamicClass.setName(classInPackage + "Dyn" + ++generatedClassSuffix);
+            processClassTree(dynamicClass, displayFields);
+            generatedClass = new GeneratedClass(dynamicClass);
+            generatedClassesForClass.put(displayFields.getKey(), generatedClass);
+        }
+        return generatedClass;
+    }
 
-        dynClass.defrost();
+    private boolean isInPackage(CtClass clazz) {
+        String currentPackageName = clazz.getPackageName();
+        for (String allowedPackageName : packages) {
+            if (currentPackageName.startsWith(allowedPackageName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void processClassTree(CtClass dynClass, Node node) throws Exception {
+
         for (CtField field : dynClass.getDeclaredFields()) {
-            if (node.getKeys().contains(field.getName())) {
+            if (node.getFields().contains(field.getName())) {
                 Node fieldNode = node.getNode(field.getName());
-                if (fieldNode.hasNodes()) { // apply include filter, aka generate new dynamic class
-                    String nestedClassName = field.getType().toClass().getName();
-                    System.out.println(nestedClassName);
-                    CtClass nestedClass = classPool.get(nestedClassName );
-                    nestedClass.defrost();
-                    nestedClass.setName(nestedClassName + "Dyn");
-                    nestedClass.freeze();
-
-                    field.setType(nestedClass);
-                    processClassTree(fieldNode, nestedClass);
-                    nestedClass.toClass();
+                // apply include filter, aka generate new dynamic class
+                if (fieldNode.hasNodes() && isInPackage(field.getType())) {
+                    GeneratedClass nestedClass = getOrCreateGeneratedClass(field.getType().getName(), fieldNode);
+                    field.setType(nestedClass.ctClass);
                 }
                 else { // include all
                     // do nothing...
@@ -64,7 +97,6 @@ public class DynBeanMapper {
                 dynClass.removeField(field);
             }
         }
-        dynClass.freeze();
 
     }
 

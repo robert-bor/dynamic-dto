@@ -4,13 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fuga.dynamicdto.model.Person;
 import com.fuga.dynamicdto.util.DynBeanMapper;
 import io.beanmapper.BeanMapper;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 
-public class PersonDtoTest {
+public class PersonDtoTest extends AbstractDtoTest {
 
     @Test
     public void mapToStatic() {
@@ -28,7 +29,7 @@ public class PersonDtoTest {
     @Test
     public void mapToDynamic() throws Exception {
         Person person = createPerson();
-        Object dynPersonDto = new DynBeanMapper().map(person, PersonDto.class, Arrays.asList("id", "name"));
+        Object dynPersonDto = dynBeanMapper.map(person, PersonDto.class, Arrays.asList("id", "name"));
 
         String json = new ObjectMapper().writeValueAsString(dynPersonDto);
         assertEquals("{\"id\":42,\"name\":\"Henk\"}", json);

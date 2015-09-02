@@ -5,7 +5,6 @@ import com.fuga.dynamicdto.model.Artist;
 import com.fuga.dynamicdto.model.Asset;
 import com.fuga.dynamicdto.model.Organization;
 import com.fuga.dynamicdto.model.Product;
-import com.fuga.dynamicdto.util.DynBeanMapper;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -14,12 +13,12 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class ProductDtoTest {
+public class ProductDtoTest extends AbstractDtoTest {
 
     @Test
     public void mapToDynamicProductDtoOrgOnlyIdName() throws Exception {
         Product product = createProduct(false);
-        Object productDto = new DynBeanMapper().map(
+        Object productDto = dynBeanMapper.map(
                 product,
                 ProductDto.class,
                 Arrays.asList( "id", "name", "organization.id", "organization.name" ));
@@ -30,10 +29,10 @@ public class ProductDtoTest {
     @Test
     public void mapToDynamicProductDtoWithLists() throws Exception {
         Product product = createProduct(true);
-        Object productDto = new DynBeanMapper().map(
+        Object productDto = dynBeanMapper.map(
                 product,
                 ProductDto.class,
-                Arrays.asList( "id", "name", "assets.id", "assets.name", "artists" ));
+                Arrays.asList("id", "name", "assets.id", "assets.name", "artists"));
         String json = new ObjectMapper().writeValueAsString(productDto);
         assertEquals("{\"assets\":[],\"id\":42,\"name\":\"Aller menscher\"}", json);
     }

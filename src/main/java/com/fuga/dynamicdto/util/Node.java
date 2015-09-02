@@ -21,7 +21,7 @@ public class Node {
         return newNode;
     }
 
-    public Set<String> getKeys() {
+    public Set<String> getFields() {
         return nodes.keySet();
     }
 
@@ -43,6 +43,23 @@ public class Node {
             }
         }
         return root;
+    }
+
+    public String getKey() {
+        StringBuffer key = new StringBuffer();
+        boolean first = true;
+        for (String field : nodes.keySet()) {
+            if (!first) {
+                key.append(',');
+            }
+            key.append(field);
+            Node fieldNode = nodes.get(field);
+            if (fieldNode.hasNodes()) {
+                key.append("(" + fieldNode.getKey() + ")");
+            }
+            first = false;
+        }
+        return key.toString();
     }
 
 }
