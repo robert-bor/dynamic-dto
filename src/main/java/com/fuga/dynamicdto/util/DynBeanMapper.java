@@ -3,10 +3,15 @@ package com.fuga.dynamicdto.util;
 import com.fuga.dynamicdto.dto.PersonDto;
 import com.fuga.dynamicdto.model.Person;
 import io.beanmapper.BeanMapper;
+import io.beanmapper.annotations.BeanCollection;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtField;
+import javassist.bytecode.AnnotationsAttribute;
+import javassist.bytecode.ConstPool;
+import javassist.bytecode.annotation.Annotation;
+import javassist.bytecode.annotation.ClassMemberValue;
 
 import java.util.*;
 
@@ -66,6 +71,7 @@ public class DynBeanMapper {
             processClassTree(dynamicClass, displayFields);
             generatedClass = new GeneratedClass(dynamicClass);
             generatedClassesForClass.put(displayFields.getKey(), generatedClass);
+        } else {
         }
         return generatedClass;
     }
@@ -89,12 +95,27 @@ public class DynBeanMapper {
                 if (fieldNode.hasNodes() && isInPackage(field.getType())) {
                     GeneratedClass nestedClass = getOrCreateGeneratedClass(field.getType().getName(), fieldNode);
                     field.setType(nestedClass.ctClass);
+                } else if (field.hasAnnotation(BeanCollection.class)){
+                    BeanCollection beanCollection = (BeanCollection)field.getAnnotation(BeanCollection.class);
+                    Class elementType = beanCollection.elementType();
+                    GeneratedClass elementClass = getOrCreateGeneratedClass(elementType.getName(), fieldNode);
+
+                    elementClass.ctClass.defrost();
+                    ConstPool constPool = elementClass.ctClass.getClassFile().getConstPool();
+                    AnnotationsAttribute attr = new AnnotationsAttribute(constPool, AnnotationsAttribute.visibleTag);
+                    Annotation annot = new Annotation("io.beanmapper.annotations.BeanCollection", constPool);
+                    annot.addMemberValue("elementType", new ClassMemberValue(elementClass.generatedClass.getName(), constPool));
+                    attr.addAnnotation(annot);
+                    field.getFieldInfo().addAttribute(attr);
+                    elementClass.ctClass.freeze();
                 }
                 else { // include all
                     // do nothing...
                 }
             } else {
-                dynClass.removeField(field);
+                if (node.hasNodes()) { // Only remove fields if there are any fields at all to remove, else assume full showing
+                    dynClass.removeField(field);
+                }
             }
         }
 

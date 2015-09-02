@@ -21,7 +21,7 @@ public class ProductDtoTest extends AbstractDtoTest {
         Object productDto = dynBeanMapper.map(
                 product,
                 ProductDto.class,
-                Arrays.asList( "id", "name", "organization.id", "organization.name" ));
+                Arrays.asList("id", "name", "organization.id", "organization.name"));
         String json = new ObjectMapper().writeValueAsString(productDto);
         assertEquals("{\"id\":42,\"name\":\"Aller menscher\",\"organization\":{\"id\":1143,\"name\":\"My Org\"}}", json);
     }
@@ -34,7 +34,18 @@ public class ProductDtoTest extends AbstractDtoTest {
                 ProductDto.class,
                 Arrays.asList("id", "name", "assets.id", "assets.name", "artists"));
         String json = new ObjectMapper().writeValueAsString(productDto);
-        assertEquals("{\"assets\":[],\"id\":42,\"name\":\"Aller menscher\"}", json);
+        assertEquals(
+                "{\"id\":42,\"name\":\"Aller menscher\"," +
+                    "\"assets\":[" +
+                        "{\"id\":1138,\"name\":\"Track 1\"}," +
+                        "{\"id\":1139,\"name\":\"Track 2\"}," +
+                        "{\"id\":1140,\"name\":\"Track 3\"}" +
+                    "]," +
+                    "\"artists\":[" +
+                        "{\"id\":1141,\"name\":\"Artist 1\"}," +
+                        "{\"id\":1142,\"name\":\"Artist 2\"}" +
+                    "]" +
+                "}", json);
     }
 
     private Product createProduct(boolean includeLists) {
