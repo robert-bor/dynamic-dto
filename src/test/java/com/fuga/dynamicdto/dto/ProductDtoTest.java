@@ -48,24 +48,42 @@ public class ProductDtoTest extends AbstractDtoTest {
                 "}", json);
     }
 
+    @Test
+    public void mapList() throws Exception {
+        List<Artist> artists = createArtists();
+        Object dto = dynBeanMapper.map(artists, ArtistDto.class, Arrays.asList("id", "name"));
+        String json = new ObjectMapper().writeValueAsString(dto);
+        assertEquals("[{\"id\":1141,\"name\":\"Artist 1\"},{\"id\":1142,\"name\":\"Artist 2\"}]", json);
+    }
+
+    @Test
+    public void mapListWithNestedEntries() throws Exception {
+        List<Product> products = new ArrayList<>();
+        products.add(createProduct(42L, true));
+        products.add(createProduct(43L, true));
+        Object dto = dynBeanMapper.map(products, ProductDto.class, Arrays.asList("id", "assets.id"));
+        String json = new ObjectMapper().writeValueAsString(dto);
+        assertEquals("" +
+                "[" +
+                    "{\"id\":42,\"assets\":[{\"id\":1138},{\"id\":1139},{\"id\":1140}]}," +
+                    "{\"id\":43,\"assets\":[{\"id\":1138},{\"id\":1139},{\"id\":1140}]}" +
+                "]", json);
+    }
+
     private Product createProduct(boolean includeLists) {
+        return createProduct(42L, includeLists);
+    }
+
+    private Product createProduct(Long productId, boolean includeLists) {
         Product product = new Product();
-        product.setId(42L);
+        product.setId(productId);
         product.setName("Aller menscher");
         product.setUpc("12345678901");
         product.setInternalMemo("Secret message, not to be let out");
 
         if (includeLists) {
-            List<Asset> assets = new ArrayList<>();
-            assets.add(createAsset(1138L, "Track 1", "NL-123-ABCDEFGH"));
-            assets.add(createAsset(1139L, "Track 2", "NL-123-ABCDEFGI"));
-            assets.add(createAsset(1140L, "Track 3", "NL-123-ABCDEFGJ"));
-            product.setAssets(assets);
-
-            List<Artist> artists = new ArrayList<>();
-            artists.add(createArtist(1141L, "Artist 1"));
-            artists.add(createArtist(1142L, "Artist 2"));
-            product.setArtists(artists);
+            product.setAssets(createAssets());
+            product.setArtists(createArtists());
         }
 
         Organization organization = new Organization();
@@ -75,6 +93,21 @@ public class ProductDtoTest extends AbstractDtoTest {
         product.setOrganization(organization);
 
         return product;
+    }
+
+    private List<Asset> createAssets() {
+        List<Asset> assets = new ArrayList<>();
+        assets.add(createAsset(1138L, "Track 1", "NL-123-ABCDEFGH"));
+        assets.add(createAsset(1139L, "Track 2", "NL-123-ABCDEFGI"));
+        assets.add(createAsset(1140L, "Track 3", "NL-123-ABCDEFGJ"));
+        return assets;
+    }
+
+    private List<Artist> createArtists() {
+        List<Artist> artists = new ArrayList<>();
+        artists.add(createArtist(1141L, "Artist 1"));
+        artists.add(createArtist(1142L, "Artist 2"));
+        return artists;
     }
 
     private Asset createAsset(Long id, String name, String isrc) {

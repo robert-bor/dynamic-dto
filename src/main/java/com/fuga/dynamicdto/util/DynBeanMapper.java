@@ -47,15 +47,23 @@ public class DynBeanMapper {
         addPackagePrefix(packagePrefixClass.getPackage().getName());
     }
 
-    public Object map(Object object, Class clazz, List<String> includeFields) throws Exception {
+    public <S> Object map(S source, Class targetClass, List<String> includeFields) throws Exception {
         if (includeFields == null || includeFields.size() == 0) {
-            return beanMapper.map(object, clazz);
+            return beanMapper.map(source, targetClass);
         }
+        return beanMapper.map(source, getOrCreateGeneratedClass(targetClass, includeFields).generatedClass);
+    }
 
+    public <S> Collection map(Collection<S> sourceItems, Class targetClass, List<String> includeFields) throws Exception {
+        if (includeFields == null || includeFields.size() == 0) {
+            return beanMapper.map(sourceItems, targetClass);
+        }
+        return beanMapper.map(sourceItems, getOrCreateGeneratedClass(targetClass, includeFields).generatedClass);
+    }
+
+    private GeneratedClass getOrCreateGeneratedClass(Class targetClass, List<String> includeFields) throws Exception {
         Node displayFields = Node.createTree(includeFields);
-        GeneratedClass dynPersonDtoClass = getOrCreateGeneratedClass(clazz.getName(), displayFields);
-
-        return beanMapper.map(object, dynPersonDtoClass.generatedClass);
+        return getOrCreateGeneratedClass(targetClass.getName(), displayFields);
     }
 
     protected GeneratedClass getOrCreateGeneratedClass(String classInPackage, Node displayFields) throws Exception {
@@ -71,7 +79,6 @@ public class DynBeanMapper {
             processClassTree(dynamicClass, displayFields);
             generatedClass = new GeneratedClass(dynamicClass);
             generatedClassesForClass.put(displayFields.getKey(), generatedClass);
-        } else {
         }
         return generatedClass;
     }
